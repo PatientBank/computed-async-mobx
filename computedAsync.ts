@@ -5,8 +5,8 @@ export function isPromiseLike<T>(result: PromiseLike<T>|T): result is PromiseLik
 }
 
 /**
- * The type returned by the `computedAsync` function. Represents the current `value`. Accessing 
- * the value inside a reaction will automatically listen to it, just like an `observable` or 
+ * The type returned by the `computedAsync` function. Represents the current `value`. Accessing
+ * the value inside a reaction will automatically listen to it, just like an `observable` or
  * `computed`. The `busy` property is `true` when the asynchronous function is currently running.
  */
 export interface ComputedAsyncValue<T> {
@@ -36,24 +36,26 @@ class ComputedAsync<T> implements ComputedAsyncValue<T> {
     private cachedValue: T;
     private version = 0;
     private monitor: undefined | (() => void);
-    
+
     constructor(private options: ComputedAsyncOptions<T>) {
         this.atom = new Atom(options.name || "ComputedAsync", () => this.wake(), () => this.sleep());
         this.cachedValue = options.init;
     }
 
     private wake() {
-        this.sleep();
-        
-        this.monitor = this.options.delay !== undefined 
-            ? autorunAsync(() => this.observe(), this.options.delay)
-            : autorun(() => this.observe());
+        setTimeout(() => {
+            this.sleep();
+
+            this.monitor = this.options.delay !== undefined
+                ? autorunAsync(() => this.observe(), this.options.delay)
+                : autorun(() => this.observe());
+        });
     }
 
     private observe(): void {
         const thisVersion = ++this.version;
 
-        if (this.options.revert) {                
+        if (this.options.revert) {
             this.cachedValue = this.options.init;
             this.atom.reportChanged();
         }
@@ -69,11 +71,11 @@ class ComputedAsync<T> implements ComputedAsyncValue<T> {
             } else {
                 this.starting();
                 possiblePromise.then(
-                    current((v: T) => this.stopped(false, undefined, v)), 
+                    current((v: T) => this.stopped(false, undefined, v)),
                     current((e: any) => this.handleError(e)));
             }
         } catch (x) {
-            this.handleError(x);                
+            this.handleError(x);
         }
     }
 
@@ -92,7 +94,7 @@ class ComputedAsync<T> implements ComputedAsyncValue<T> {
 
         if (v !== this.cachedValue) {
             this.cachedValue = v;
-            this.atom.reportChanged();            
+            this.atom.reportChanged();
         }
     }
 
@@ -104,7 +106,7 @@ class ComputedAsync<T> implements ComputedAsyncValue<T> {
                 newValue = this.options.error(e);
             }
             catch (x) {
-                console.error(x);                 
+                console.error(x);
             }
         }
 
@@ -112,12 +114,12 @@ class ComputedAsync<T> implements ComputedAsyncValue<T> {
     }
 
     private sleep() {
-        
+
         const monitor = this.monitor;
         this.monitor = undefined;
-        
+
         if (monitor) {
-            monitor();
+            setTimeout(() => monitor());
         }
     }
 
@@ -128,7 +130,7 @@ class ComputedAsync<T> implements ComputedAsyncValue<T> {
             throw this.error;
         }
 
-        return this.cachedValue;        
+        return this.cachedValue;
     }
 }
 
